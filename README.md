@@ -9,9 +9,13 @@ Done:
 to do :  
 - visualization
   - marqueurs derriere disant genre 1m, 2m, etc...
-  - nodes
-  - fitness graph
   - comme dans evolution voir generation par generation
   - species HUD
+      - nodes
+      - fitness graph
+      - quel gen apparu
+      - parents (?)
 
+- ability to speed up rendering
+- change config with settings
 - creature editor

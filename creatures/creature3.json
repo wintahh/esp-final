@@ -1,0 +1,93 @@
+{
+    "bodies": [
+        {
+            "name": "torso1",
+            "type": "torso",
+            "size": [120,30],
+            "position": [0,0]
+        },
+        {
+            "name": "leg1",
+            "type": "leg",
+            "size": [60,30],
+            "position": [90,0]
+        },
+        {
+           "name": "leg2",
+            "type": "leg",
+            "size": [60,30],
+            "position": [-90,0] 
+        },
+        {
+            "name": "leg12",
+            "type": "leg",
+            "size": [60,30],
+            "position": [150,0]
+        },
+        {
+            "name": "leg22",
+            "type": "leg",
+            "size": [60,30],
+            "position": [-150,0]
+        }
+    ],
+
+    "joints": [
+        {
+            "type": "pivot",
+            "body_a": "torso1",
+            "body_b": "leg1",
+            "anchor": [60,0],
+            "actuated": true
+        },
+        {
+            "type": "rotary_limit",
+            "body_a": "torso1",
+            "body_b": "leg1",
+            "min_angle": -135,
+            "max_angle": 135
+        },
+        {
+            "type": "pivot",
+            "body_a": "torso1",
+            "body_b": "leg2",
+            "anchor": [-60,0],
+            "actuated": true
+        },
+        {
+            "type": "rotary_limit",
+            "body_a": "torso1",
+            "body_b": "leg2",
+            "min_angle": -135,
+            "max_angle": 135
+        },
+        {
+            "type": "pivot",
+            "body_a": "leg1",
+            "body_b": "leg12",
+            "anchor": [120,0],
+            "actuated": true
+        },
+        {
+            "type": "rotary_limit",
+            "body_a": "leg1",
+            "body_b": "leg12",
+            "min_angle": -135,
+            "max_angle": 135
+        },
+        {
+            "type": "pivot",
+            "body_a": "leg2",
+            "body_b": "leg22",
+            "anchor": [-120,0],
+            "actuated": true
+        },
+        {
+            "type": "rotary_limit",
+            "body_a": "leg2",
+            "body_b": "leg22",
+            "min_angle": -135,
+            "max_angle": 135
+        }
+    ]
+}

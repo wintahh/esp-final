@@ -105,47 +105,18 @@ min_species_size   = 1
 
     return config
 
-def eval_genome(genome, config):
-    net = neat.nn.FeedForwardNetwork.create(genome, config)
-    game = Game(render=False)
-    fitness = game.run_genome(net, render=False)
-    genome.fitness = fitness
-    return fitness
+with open("genomes/creat3-frog.pkl", "rb") as f:
+    winner = pickle.load(f)
 
-def run_neat(config_file, generations=50, num_workers=None):
-    game = Game(render=False)
-    creature = game.creature
-    num_inputs = 3*len(creature.bodies) + 2
-    num_outputs = len(creature.springs)
-    config = generate_neat_config_object(num_inputs,num_outputs)
+game = Game(render=False)
+num_inputs = 3*len(game.creature.bodies) + 2
+num_outputs = len(game.creature.springs)
 
-    pop = neat.Population(config)
+config = generate_neat_config_object(num_inputs, num_outputs)
 
-    pop.add_reporter(neat.StdOutReporter(True))
-    stats = neat.StatisticsReporter()
-    pop.add_reporter(stats)
+print("\nLoaded genome:\n", winner)
 
-    # use all cores if num_workers=None
-    if num_workers is None:
-        import multiprocessing
-        num_workers = multiprocessing.cpu_count()
+net = neat.nn.FeedForwardNetwork.create(winner, config)
 
-    print(f"Using {num_workers} parallel workers for evaluation.")
-
-    pe = neat.ParallelEvaluator(num_workers, eval_genome)
-
-    # Run NEAT evolution using parallel evaluation
-    winner = pop.run(pe.evaluate, generations)
-
-    with open("best_genome.pkl", "wb") as f:
-        pickle.dump(winner, f)
-
-    print("\nBest genome:\n", winner)
-
-    net = neat.nn.FeedForwardNetwork.create(winner, config)
-    game = Game(render=True)
-    game.run_genome(net, render=True)
-
-if __name__ == "__main__":
-    config_path = "fig"
-    run_neat(config_path, generations=10)
+game = Game(render=True)
+game.run_genome(net, render=True)

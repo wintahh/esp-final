@@ -1,0 +1,150 @@
+{
+    "bodies": [
+        {
+            "name": "body0",
+            "type": "leg",
+            "size": [
+                60,
+                30
+            ],
+            "position": [
+                360,
+                360
+            ]
+        },
+        {
+            "name": "body1",
+            "type": "leg",
+            "size": [
+                60,
+                30
+            ],
+            "position": [
+                420,
+                330
+            ]
+        },
+        {
+            "name": "body2",
+            "type": "leg",
+            "size": [
+                60,
+                30
+            ],
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "name": "body3",
+            "type": "leg",
+            "size": [
+                60,
+                30
+            ],
+            "position": [
+                420,
+                270
+            ]
+        },
+        {
+            "name": "body4",
+            "type": "leg",
+            "size": [
+                60,
+                30
+            ],
+            "position": [
+                480,
+                360
+            ]
+        },
+        {
+            "name": "body5",
+            "type": "leg",
+            "size": [
+                60,
+                30
+            ],
+            "position": [
+                360,
+                390
+            ]
+        },
+        {
+            "name": "body6",
+            "type": "leg",
+            "size": [
+                60,
+                30
+            ],
+            "position": [
+                480,
+                390
+            ]
+        }
+    ],
+    "joints": [
+        {
+            "type": "pivot",
+            "body_a": "body6",
+            "body_b": "body4",
+            "anchor": [
+                480,
+                375
+            ],
+            "actuated": true
+        },
+        {
+            "type": "pivot",
+            "body_a": "body4",
+            "body_b": "body1",
+            "anchor": [
+                450,
+                345
+            ],
+            "actuated": true
+        },
+        {
+            "type": "pivot",
+            "body_a": "body0",
+            "body_b": "body5",
+            "anchor": [
+                360,
+                375
+            ],
+            "actuated": true
+        },
+        {
+            "type": "pivot",
+            "body_a": "body0",
+            "body_b": "body1",
+            "anchor": [
+                390,
+                345
+            ],
+            "actuated": true
+        },
+        {
+            "type": "pivot",
+            "body_a": "body1",
+            "body_b": "body2",
+            "anchor": [
+                420,
+                315
+            ],
+            "actuated": true
+        },
+        {
+            "type": "pivot",
+            "body_a": "body2",
+            "body_b": "body3",
+            "anchor": [
+                420,
+                285
+            ],
+            "actuated": true
+        }
+    ]
+}

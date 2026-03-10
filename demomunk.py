@@ -3,8 +3,9 @@ import pymunk
 import pymunk.pygame_util
 import sys
 import math
+import json
 
-
+BACKGROUND = (35,35,35)
 
 
 class Environment:
@@ -14,7 +15,7 @@ class Environment:
 
     def create_ground(self):
         ground = pymunk.Segment(self.space.static_body,
-                                (50, 550),
+                                (-1000, 550),
                                 (75110, 550),
                                 5)
         ground.friction = 1.0
@@ -30,99 +31,115 @@ class Environment:
 class Creature:
     def __init__(self, space, position):
         self.space = space
-        self.mass = 2
-        self.size = (120, 30)
-
+        self.torsomass = 2
+        self.legmass = 1
         self.group = 1
+        self.musclestiffness = 120000
+        self.muscledamping = 12000
         self.filter = pymunk.ShapeFilter(group=self.group)
 
-        self.create_bodies(position)
-        self.create_joints()
+        with open("creatures/creature3.json") as f:
+            data = json.load(f)
 
-    def create_bodies(self, position):
-        pos = pymunk.Vec2d(*position)
+        self.create_bodies(data)
+        self.create_joints_springs(data)
 
-        # body1
-        self.body1 = pymunk.Body(
-            self.mass,
-            pymunk.moment_for_box(self.mass, self.size)
-        )
-        self.body1.position = pos
-        self.body1.angular_damping = 0.9
+    def create_bodies(self, data):
+        self.bodies = {}
+        self.body_types = {}
+        self.shapes = {}
 
-        self.shape1 = pymunk.Poly.create_box(self.body1, self.size)
-        self.shape1.friction = 0.8
-        self.shape1.collision_type = 2
-        self.shape1.filter = self.filter
+        for body_data in data["bodies"]:
+            type = body_data["type"]
+            if type == "torso":
+                mass = self.torsomass
+            elif type == "leg":
+                mass = self.legmass
+            else:
+                print(f"Couldn't find {body_data["name"]}'s type, going with leg")
+            size = body_data["size"]
+            pos = body_data["position"]
 
-        # b2
-        self.body2 = pymunk.Body(
-            self.mass,
-            pymunk.moment_for_box(self.mass, self.size)
-        )
-        self.body2.position = pos + (120,0)
-        self.body2.angular_damping = 0.9
+            body = pymunk.Body(mass, pymunk.moment_for_box(mass, size))
+            body.position = pymunk.Vec2d(*pos)
+            body.angular_damping = 0.4
 
-        self.shape2 = pymunk.Poly.create_box(self.body2, self.size)
-        self.shape2.friction = 0.8
-        self.shape2.collision_type = 2
-        self.shape2.filter = self.filter
+            shape = pymunk.Poly.create_box(body,size)
+            shape.friction = 0.8
+            shape.collision_type = 2
+            shape.filter = self.filter
 
-        self.space.add(
-            self.body1, self.shape1,
-            self.body2, self.shape2
-        )
+            self.space.add(body,shape)
 
-    def create_joints(self):
-        hinge_position = self.body1.position + (60, 0)
+            self.bodies[body_data["name"]] = body
+            self.body_types[body_data["name"]] = type
+            self.shapes[body_data["name"]] = shape
 
-        self.pivot = pymunk.PivotJoint(self.body1, self.body2, hinge_position)
-        
-        self.limit = pymunk.RotaryLimitJoint(
-            self.body1, self.body2,
-            math.radians(-90),
-            math.radians(90)
-        )
+    def create_joints_springs(self, data):
+        self.springs = []
+        self.rotlimits = []
+        for joint in data["joints"]:
+            body1 = self.bodies[joint["body_a"]]
+            body2 = self.bodies[joint["body_b"]]
+            s = None
+            j = None
 
-        self.motor1 = pymunk.SimpleMotor(self.space.static_body, self.body1, 0)
-        self.motor1.max_force = 1000000
+            if joint["type"] == "pivot":
+                anchor = joint["anchor"]
+                j = pymunk.PivotJoint(
+                    body1,
+                    body2,
+                    anchor
+                )
+                
+                if joint.get("actuated", False):
+                    s = pymunk.DampedRotarySpring(
+                        body1,
+                        body2,
+                        0,
+                        self.musclestiffness,
+                        self.muscledamping
+                    )
+            elif joint["type"] == "rotary_limit":
+                j = pymunk.RotaryLimitJoint(
+                    body1,
+                    body2,
+                    math.radians(joint["min_angle"]),
+                    math.radians(joint["max_angle"])
+                )
+            else:
+                print(f"Couldn't find {joint["name"]}'s type, report plz :)")
 
-        self.motor2 = pymunk.SimpleMotor(self.body1, self.body2, 0)
-        self.motor2.max_force = 1000000
+            self.space.add(j)
+            if s:
+                self.springs.append(s)
+                self.space.add(s)
 
-        self.space.add(self.pivot, self.limit, self.motor1, self.motor2)
 
-    def update_controls(self, keys):
-        rate = 5
-        if keys[pygame.K_LEFT]:
-            self.motor1.rate = -rate
-        elif keys[pygame.K_RIGHT]:
-            self.motor1.rate = rate
-        else:
-            self.motor1.rate = 0
-
-        if keys[pygame.K_a]:
-            self.motor2.rate = -rate
-        elif keys[pygame.K_d]:
-            self.motor2.rate = rate
-        else:
-            self.motor2.rate = 0
+    def update_controls(self, keys): # wtv just debug stuff
+        for s in self.springs:
+            if self.springs.index(s) % 2:
+                if keys[pygame.K_LEFT]:
+                    s.rest_angle = math.pi * 3/4
+                elif keys[pygame.K_RIGHT]:
+                    s.rest_angle = -1 * math.pi * 3/4
+            else:
+                if keys[pygame.K_a]:
+                    s.rest_angle = math.pi * 3/4
+                elif keys[pygame.K_d]:
+                    s.rest_angle = -1 * math.pi * 3/4
 
     def get_center_x(self):
-        return (self.body1.position.x +
-                self.body2.position.x) / 2
+        com_x = 0
+        for name in self.bodies:
+            com_x += self.bodies[name].position.x
+        return com_x/len(self.bodies)
     
     def get_center_y(self):
-        return (self.body1.position.y +
-                self.body2.position.y) / 2
-
-
-
-
-
-
-
-
+        com_y = 0
+        for name in self.bodies :
+            com_y += self.bodies[name].position.y
+        return com_y/len(self.bodies)
 
 class Game:
     def __init__(self, render=True):
@@ -165,28 +182,23 @@ class Game:
         return 0
 
     def get_state(self):
-        b1 = self.creature.body1
-        b2 = self.creature.body2
-
-        bodies = [(b1, self.creature.shape1),(b2,self.creature.shape2)]
         state = [
             0,                                               # vel_x
-            0,                                               # vel_y
-            self.creature.get_center_x(),
-            self.creature.get_center_y()
+            0                                                # vel_y
         ]
 
-        for body,shape in bodies:                                  # for each body in creature
+        for name in self.creature.bodies:   # for each body in creature
+            body = self.creature.bodies[name]
+            shape = self.creature.shapes[name]
+
             state[0] += body.velocity.x                      # vel_x
             state[1] += body.velocity.y                      # vel_y
-            state.append(body.angle/(2*math.pi))             # normalized angle
+            state.append(math.sin(body.angle))               # normalized angle
             state.append(body.angular_velocity/(2*math.pi))  # tour par seconde
-            state.append(body.position.x - state[2])         # position relative to center of mass
-            state.append(body.position.y - state[3])         # ditto
-            state.append(self.check_ground_contact(shape))
+            state.append(self.check_ground_contact(shape))   # touche le sol
 
-        state[0] = state[0]/len(bodies)                      #vel_x
-        state[1] = state[1]/len(bodies)                      #vel_y
+        state[0] = state[0]/len(self.creature.bodies)        #vel_x
+        state[1] = state[1]/len(self.creature.bodies)       #vel_y
         return state
 
     def step(self):
@@ -198,7 +210,7 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.running = False
 
-            self.screen.fill((30, 30, 30))
+            self.screen.fill(BACKGROUND)
 
             creature_x = self.creature.get_center_x()
             offset_x = self.width / 2 - creature_x
@@ -220,8 +232,7 @@ class Game:
             self.handle_events()
             self.update()
             self.draw()
-
-        pygame.quit()
+        pygame.quit
         sys.exit()
 
     def handle_events(self):
@@ -236,7 +247,7 @@ class Game:
         self.space.step(1 / 60)
 
     def draw(self):
-        self.screen.fill((30, 30, 30))
+        self.screen.fill(BACKGROUND)
 
         creature_x = self.creature.get_center_x()
         offset_x = self.width / 2 - creature_x
@@ -257,22 +268,35 @@ class Game:
         self.reset()
 
         start_x = self.creature.get_center_x()
-        max_steps = 500
+        if render:
+            max_steps = 10000
+        else:
+            max_steps = 500
+
+        ground_punishment = 0
+        rolling_punishment = 0
 
         for _ in range(max_steps):
             inputs = self.step()  # get current state first
 
             outputs = net.activate(inputs)
+            
+            for name in self.creature.shapes:
+                if "torso" in name:
+                    if self.check_ground_contact(self.creature.shapes[name]):
+                        ground_punishment += 100
+                    if abs(self.creature.bodies[name].angle) > math.pi/4: # va donc de 0 a infini, si creature fait un tour complet bin elle continura a avoir le punishment
+                        rolling_punishment += 10
 
-            if self.render:
-                print(outputs)
+            for s in self.creature.springs:
+                s.rest_angle = outputs[self.creature.springs.index(s)] * math.pi*3/4 # this is to change, access rotation limit and change it to radians
+                if render:
+                    print(f"{self.creature.springs.index(s)}: {round(outputs[self.creature.springs.index(s)],3)}")
 
-            self.creature.motor1.rate = outputs[0] * 2  # body1 rotation
-            self.creature.motor2.rate = outputs[1] * 2  # body2 rotation
-
-            state = self.step()
-
-        fitness = state[2] - start_x
+        position_x_for_debug = self.creature.get_center_x()
+        fitness = position_x_for_debug - start_x - ground_punishment - rolling_punishment
+        if render:
+            print(position_x_for_debug, ground_punishment, rolling_punishment)
         return fitness/100
 
         

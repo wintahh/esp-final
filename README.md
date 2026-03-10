@@ -12,6 +12,6 @@ to do :
   - nodes
   - fitness graph
   - comme dans evolution voir generation par generation
-  - species chart
+  - species HUD
 
 - creature editor

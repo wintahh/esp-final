@@ -72,7 +72,7 @@ single_structural_mutation = false
 structural_mutation_surer  = default
 
 [DefaultSpeciesSet]
-compatibility_threshold = 3.0
+compatibility_threshold = 4.0
 
 [DefaultStagnation]
 species_fitness_func = max
@@ -108,15 +108,25 @@ min_species_size   = 1
 def eval_genome(genome, config):
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     game = Game(render=False)
-    fitness = game.run_genome(net, render=False)
+    fitness = game.run_genome(net)
     genome.fitness = fitness
     return fitness
 
-def run_neat(config_file, generations=50, num_workers=None):
+
+def run_neat(generations=50, num_workers=None):
     game = Game(render=False)
-    creature = game.creature
+
+    # temporary creature in order to generate config. 
+    # kinda janky, but its whatever.
+    game.spawn_creatures(1)
+    creature = game.creatures[0]
+
     num_inputs = 3*len(creature.bodies) + 2
     num_outputs = len(creature.springs)
+
+    game.creatures = [] # remove temp creature
+    viewer = Game(render=True)
+
     config = generate_neat_config_object(num_inputs,num_outputs)
 
     pop = neat.Population(config)
@@ -127,25 +137,58 @@ def run_neat(config_file, generations=50, num_workers=None):
 
     # use all cores if num_workers=None
     if num_workers is None:
-        import multiprocessing
-        num_workers = multiprocessing.cpu_count()
+        from multiprocessing import cpu_count
+        num_workers = cpu_count()
 
     print(f"Using {num_workers} parallel workers for evaluation.")
 
     pe = neat.ParallelEvaluator(num_workers, eval_genome)
 
-    # Run NEAT evolution using parallel evaluation
-    winner = pop.run(pe.evaluate, generations)
+    winner = None
+
+    for gen in range(generations):    # every gen, get species_best
+        print(f"\n---- Generation {gen} ----")
+
+        # evaluate genomes
+        genomes = list(pop.population.items())
+        pe.evaluate(genomes, config)
+
+        # collect best genome per species
+        species_best = []
+
+        for sid, species in pop.species.species.items(): # sid is species id
+            members = species.members
+            best = max(members.values(), key=lambda g: g.fitness if g.fitness is not None else -999999)
+            species_best.append(best)
+
+        print("Species best genomes:", len(species_best))
+        nets = [neat.nn.FeedForwardNetwork.create(g, config) for g in species_best]
+
+        viewer.run_multiple_genomes(nets)
+
+        # save best overall genome
+        best_genome = max(pop.population.values(), key=lambda g: g.fitness)
+        winner = best_genome
+
+        # reproduce next gen
+        pop.population = pop.reproduction.reproduce(
+            config, pop.species, config.pop_size, pop.generation
+        )
+
+        if not pop.species.species:
+            pop.population = pop.reproduction.create_new(
+                config.genome_type, config.genome_config, config.pop_size
+            )
+
+        pop.species.speciate(config, pop.population, pop.generation)
+
+        pop.generation += 1
 
     with open("best_genome.pkl", "wb") as f:
         pickle.dump(winner, f)
 
     print("\nBest genome:\n", winner)
 
-    net = neat.nn.FeedForwardNetwork.create(winner, config)
-    game = Game(render=True)
-    game.run_genome(net, render=True)
-
 if __name__ == "__main__":
-    config_path = "fig"
-    run_neat(config_path, generations=10)
+    run_neat(generations=1000000)
+

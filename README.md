@@ -9,6 +9,10 @@ Done:
 -----------------------------------
 
 to do :  
+- start menu
+  - choose which creature you want to use
+  - config settings
+  - visual settings
 - visualization
   - marqueurs derriere disant genre 1m, 2m, etc...
   - species HUD
@@ -17,5 +21,4 @@ to do :
       - quel gen apparu
       - parents (?)
     
-- change config with settings
 - creature editor
